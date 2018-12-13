@@ -1,6 +1,5 @@
 module Board
-  (
-    Board, Rank, Square
+  ( Board, Rank, Square
   , Piece (Piece)
   , Piecetype (Pawn, Knight, Bishop, Rook, King, Queen)
   , Pawntype (Starting, Passant, Normal)
@@ -16,7 +15,7 @@ data Piecetype = Pawn Pawntype | Knight | Bishop | Rook | King | Queen deriving 
 data Pawntype = Starting | Passant | Normal deriving (Show, Eq)
 data Color = White | Black deriving (Show, Eq)
 
-initialBoard = [(rCloser Black), (pawnRow Black)] ++ (replicate 4 emptyRow) ++ [(pawnRow White), (rCloser White)]
+initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [(pawnRow Black), (rCloser Black)]
   where rCloserl :: Color -> Rank
         rCloserl c = map Just [Piece Rook c, Piece Knight c, Piece Bishop c]
 
