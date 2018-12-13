@@ -5,12 +5,22 @@ module Board
   , Pawntype (Starting, Passant, Normal)
   , Color (White, Black)
   , initialBoard
+  , getSquare
+  , isPiece
+  , isPiecePos
+  , isPieceColor
+  , isPieceColorPos
+  , getKing
   ) where
+
+import Data.List (findIndex)
+import Data.Maybe (fromJust)
 
 type Board = [Rank]
 type Rank = [Square]
 type Square = Maybe Piece
-data Piece = Piece Piecetype Color deriving Show
+type SquarePos = (Int, Int)
+data Piece = Piece Piecetype Color deriving (Show, Eq)
 data Piecetype = Pawn Pawntype | Knight | Bishop | Rook | King | Queen deriving (Show, Eq)
 data Pawntype = Starting | Passant | Normal deriving (Show, Eq)
 data Color = White | Black deriving (Show, Eq)
@@ -28,3 +38,28 @@ initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [
         emptyRow :: Rank
         emptyRow = replicate 8 Nothing
 
+getSquare :: SquarePos -> Board -> Square
+getSquare (i, j) b = ((b !! j) !! i)
+
+isPiece :: Square -> Bool
+isPiece Nothing = False
+isPiece _ = True
+
+isPieceColor :: Square -> Color -> Bool
+isPieceColor sq@(Just (Piece p c')) c = isPiece sq && c' == c
+
+isPiecePos :: SquarePos -> Board -> Bool
+isPiecePos sqp = isPiece . getSquare sqp
+
+isPieceColorPos :: SquarePos -> Board -> Color -> Bool
+isPieceColorPos sqp = isPieceColor . (getSquare sqp) 
+
+getKing :: Color -> Board -> Maybe SquarePos
+getKing c b = getKing' 0 b
+  where
+    getKing' :: Int -> Board -> Maybe (Int, Int)
+    getKing' n (x:xs) | f /= Nothing = Just (n, fromJust $ f)
+                      | otherwise = getKing' (n+1) xs
+      where f = findIndex ((==) (Just (Piece King c))) x
+
+    getKing' _ [] = Nothing
