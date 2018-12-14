@@ -2,7 +2,10 @@ module Main where
 
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Game as Game
+import qualified Graphics.Gloss.Interface.Pure.Simulate as Simulate
 import Board
+import BestMove
+import MoveMaker
 
 width, height, offset :: Int
 width = 800
@@ -60,7 +63,8 @@ fator = (width `div` 15) :: Int
 mkBoard :: [Gloss.Picture]
 mkBoard = [(Gloss.translate (fromIntegral (x)) (fromIntegral (y)) $ Gloss.color (if ((x `div` fator `mod` 2 == 1 && y `div` fator `mod` 2 == 1) || (x `div` fator `mod` 2 == 0 && y `div` fator `mod` 2 == 0)) then (Gloss.greyN 0.5) else Gloss.white) $ Gloss.rectangleSolid (fromIntegral fator)  (fromIntegral fator)) | x <- (map (*fator) [1..8]), y <- (map (*fator) [1..8])]
 
-mkPieces bs = mkPieces' (0,0) (board bs)
+mkPieces :: Board -> [Gloss.Picture]
+mkPieces = mkPieces' (0,0)
   where mkPieces' :: SquarePos -> Board -> [Gloss.Picture]
         mkPieces' (i,j) b = Gloss.translate (fromIntegral ((j+1)*fator)) (fromIntegral ((i+1)*fator)) (mkPiece (getSquare (i,j) b)) : (if (i < 7) then mkPieces' (i+1, j) b else []) ++ (if (j < 7) then mkPieces' (i, j+1) b else [])
         mkPiece :: Square -> Gloss.Picture
@@ -72,14 +76,43 @@ mkPieces bs = mkPieces' (0,0) (board bs)
         mkPiece (Just (Piece (King) c)) = if c == White then whiteKing else blackKing
         mkPiece Nothing = Gloss.blank
 
-data BoardState = Game { board :: Board }
+data BoardState =
+  Game
+  {
+    board :: Board
+  , gameElapsedTime :: Float
+  , currentPlayer :: Color
+  }
 
-render :: BoardState -> Gloss.Picture
-render game = Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.scale 1 1 $ Gloss.pictures $ (mkBoard ++ (mkPieces game))
+
+renderGame :: BoardState -> Gloss.Picture
+renderGame game = drawBoard (board game)
+  where drawBoard b = Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.scale 1 1 $ Gloss.pictures $ (mkBoard ++ (mkPieces b))
 
 initialState :: BoardState
-initialState = Game { board = initialBoard }
+initialState = Game
+  {
+    board = initialBoard
+  , gameElapsedTime = 0
+  , currentPlayer = White
+  }
+
+stepGame :: BoardState -> BoardState
+stepGame bs = bs { board = newBoard, currentPlayer = (other c)}
+  where newBoard = bestMove (possible_moves (board bs) c) c
+        c = currentPlayer bs
+
+gameSimulationPeriod :: Float
+gameSimulationPeriod = 2
+
+simulateGame :: Simulate.ViewPort -> Float -> BoardState -> BoardState
+simulateGame _ time bs
+  | gameElapsedTime bs >= gameSimulationPeriod
+  = let bs' = stepGame bs
+    in bs' { gameElapsedTime = 0 }
+  | otherwise = bs { gameElapsedTime = gameElapsedTime bs + time }
 
 main :: IO ()
 main = do
-  Gloss.display window backGround $ render initialState
+  Gloss.simulate window backGround 20 initialState renderGame simulateGame
+

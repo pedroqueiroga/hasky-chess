@@ -11,6 +11,7 @@ module Board
   , isPieceColor
   , isPieceColorPos
   , getKing
+  , other
   ) where
 
 import Data.List (findIndex)
@@ -25,6 +26,13 @@ data Piecetype = Pawn Pawntype | Knight | Bishop | Rook | King | Queen deriving 
 data Pawntype = Starting | Passant | MakeMePassant| Normal deriving (Show, Eq)
 data Color = White | Black deriving (Show, Eq)
 
+class Other a where
+  other :: a -> a
+
+instance Other Color where
+  other White = Black
+  other Black = White
+  
 initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [(pawnRow Black), (rCloser Black)]
   where rCloserl :: Color -> Rank
         rCloserl c = map Just [Piece Rook c, Piece Knight c, Piece Bishop c]
