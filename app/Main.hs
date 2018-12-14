@@ -18,12 +18,13 @@ backGround :: Gloss.Color
 backGround = Gloss.black
 
 mkBoard :: [Gloss.Picture]
-mkBoard = replicate 4 (Gloss.translate 0 0 $ Gloss.color Gloss.black $ Gloss.rectangleSolid 10 10) ++ replicate 4 (Gloss.translate 10 10 $ Gloss.color Gloss.white $ Gloss.rectangleSolid 10 10)
+mkBoard = [(Gloss.translate (fromIntegral (x-(4*fator))) (fromIntegral (y-(4*fator))) $ Gloss.color (if ((x `div` fator `mod` 2 == 1 && y `div` fator `mod` 2 == 1) || (x `div` fator `mod` 2 == 0 && y `div` fator `mod` 2 == 0)) then Gloss.black else Gloss.white) $ Gloss.rectangleSolid (fromIntegral fator)  (fromIntegral fator)) | x <- (map (*fator) [1..8]), y <- (map (*fator) [1..8])]
+  where fator = (width `div` 40) :: Int
 
 data BoardState = Game { board :: Board }
 
 render :: BoardState -> Gloss.Picture
-render game = Gloss.translate 0 0 $ Gloss.scale 0 0 $ Gloss.pictures $ mkBoard
+render game = Gloss.translate 0 0 $ Gloss.scale 2 2 $ Gloss.pictures $ mkBoard
 
 initialState :: BoardState
 initialState = Game { board = initialBoard }
