@@ -2,7 +2,7 @@ module Board
   ( Board, Rank, Square, SquarePos
   , Piece (Piece)
   , Piecetype (Pawn, Knight, Bishop, Rook, King, Queen)
-  , Pawntype (Starting, Passant, Normal)
+  , Pawntype (Starting, Passant, MakeMePassant, Normal)
   , Color (White, Black)
   , initialBoard
   , getSquare
@@ -22,7 +22,7 @@ type Square = Maybe Piece
 type SquarePos = (Int, Int)
 data Piece = Piece Piecetype Color deriving (Show, Eq)
 data Piecetype = Pawn Pawntype | Knight | Bishop | Rook | King | Queen deriving (Show, Eq)
-data Pawntype = Starting | Passant | Normal deriving (Show, Eq)
+data Pawntype = Starting | Passant | MakeMePassant| Normal deriving (Show, Eq)
 data Color = White | Black deriving (Show, Eq)
 
 initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [(pawnRow Black), (rCloser Black)]
@@ -31,7 +31,7 @@ initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [
 
         rCloser :: Color -> Rank
         rCloser c = (rCloserl c) ++ map Just [Piece Queen c, Piece King c] ++ (reverse $ rCloserl c)
-  
+
         pawnRow :: Color -> Rank
         pawnRow c = replicate 8 (Just (Piece (Pawn Starting) c))
 
@@ -52,7 +52,7 @@ isPiecePos :: SquarePos -> Board -> Bool
 isPiecePos sqp = isPiece . getSquare sqp
 
 isPieceColorPos :: SquarePos -> Board -> Color -> Bool
-isPieceColorPos sqp = isPieceColor . (getSquare sqp) 
+isPieceColorPos sqp = isPieceColor . (getSquare sqp)
 
 getKing :: Color -> Board -> Maybe SquarePos
 getKing c b = getKing' 0 b
