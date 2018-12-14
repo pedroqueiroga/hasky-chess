@@ -39,7 +39,7 @@ initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [
         emptyRow = replicate 8 Nothing
 
 getSquare :: SquarePos -> Board -> Square
-getSquare (i, j) b = ((b !! j) !! i)
+getSquare (i, j) b = b !! i !! j
 
 isPiece :: Square -> Bool
 isPiece Nothing = False
