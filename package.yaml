@@ -9,6 +9,7 @@ copyright:           "2018 Author name here"
 extra-source-files:
 - README.md
 - ChangeLog.md
+- pieces/*
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -22,6 +23,8 @@ description:         Please see the README on GitHub at <https://github.com/psq-
 dependencies:
 - base >= 4.7 && < 5
 - gloss >= 1.12.0.0
+- gloss-juicy >= 0.2.2
+- gloss-game >= 0.3.0.0
 
 library:
   source-dirs: src

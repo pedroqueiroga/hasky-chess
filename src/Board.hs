@@ -1,5 +1,5 @@
 module Board
-  ( Board, Rank, Square
+  ( Board, Rank, Square, SquarePos
   , Piece (Piece)
   , Piecetype (Pawn, Knight, Bishop, Rook, King, Queen)
   , Pawntype (Starting, Passant, Normal)
