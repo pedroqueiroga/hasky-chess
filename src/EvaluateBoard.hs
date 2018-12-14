@@ -21,8 +21,8 @@ squareValue (Just p) = pieceValue p
 squareValue Nothing = 0
 
 evaluateRow :: Rank -> Int
-evaluateRow rank = foldr1 (+) (map squareValue rank)
+evaluateRow rank = foldl1 (+) (map squareValue rank)
 
 evaluateBoard :: Board -> Int
-evaluateBoard board = foldr1 (+) (map evaluateRow board)
+evaluateBoard board = foldl1 (+) (map evaluateRow board)
 
