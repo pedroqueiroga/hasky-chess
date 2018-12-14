@@ -57,7 +57,7 @@ pawn_move board (row, col) (Just (Piece (Pawn pt) _)) player_c = let
             else [place_piece board (row + 1, col) (Just $ Piece (Pawn Normal) player_c)]
         else []
 
-    can_forward_2 = pt == Starting && can_forward && Empty == (get_type board (row + 1, col) player_c)
+    can_forward_2 = pt == Starting && can_forward && Empty == (get_type board (row + 2, col) player_c)
     move_forward_2 = if(can_forward_2)
         then [place_piece board (row + 2, col) (Just $ Piece (Pawn MakeMePassant) player_c)]
         else []
