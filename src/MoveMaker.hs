@@ -32,7 +32,9 @@ place_piece board (row, col) sq = let
 pawn_move :: Board -> SquarePos -> Square -> Color -> [Board]
 pawn_move board (row, col) (Just (Piece (Pawn pt) _)) player_c = let
 
-    cap pos = let can_cap = Enemy == (get_type board pos player_c)
+    cap pos = let
+        target = get_type board pos player_c
+        can_cap = Enemy == target || PassantEnemy == target
         in if(can_cap)
             then [place_piece board pos (Just $ Piece (Pawn Normal) player_c)]
             else []
@@ -65,8 +67,9 @@ pawn_move _ _ _ _ = []
 
 piece_attempt_move :: Board -> Square -> Color -> SquarePos -> [Board]
 piece_attempt_move board square player_c pos = let
-    emptymove = Empty == get_type board pos player_c
-    capturemove = Enemy == get_type board pos player_c
+    target = get_type board pos player_c
+    emptymove = Empty == target
+    capturemove = Enemy == target || PassantEnemy == target
     in if (emptymove || capturemove)
         then [place_piece board pos square]
         else []
