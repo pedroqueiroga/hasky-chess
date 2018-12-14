@@ -1,4 +1,4 @@
-module EvaluateBoard
+module MoveMaker
   ( possible_moves
   ) where
 
