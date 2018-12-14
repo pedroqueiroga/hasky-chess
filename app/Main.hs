@@ -99,11 +99,14 @@ initialState = Game
 
 stepGame :: BoardState -> BoardState
 stepGame bs = bs { board = newBoard, currentPlayer = (other c)}
-  where newBoard = bestMove (possible_moves (board bs) c) c
+  where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
 gameSimulationPeriod :: Float
-gameSimulationPeriod = 2
+gameSimulationPeriod = 5
+
+maxDepth :: Int
+maxDepth = 3
 
 simulateGame :: Simulate.ViewPort -> Float -> BoardState -> BoardState
 simulateGame _ time bs
