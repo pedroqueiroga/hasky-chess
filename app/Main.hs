@@ -131,7 +131,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
   = if fim bs == True then initialState
     else
       if (squareSelected bs) == Nothing
-      then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
+      then bs { squareSelected = if (isPiecePosUnsafe (fromPixel mp) (board bs)) then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
@@ -139,6 +139,9 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [] }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
+        isPiecePosUnsafe (x, y) b = if (x < 0 || x > 7 || y < 0 || y > 7)
+                                    then False
+                                    else isPiecePos (x, y) b
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
