@@ -152,6 +152,8 @@ handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
     then initialState
     else bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
 
+handleEvent (EventKey (Char 'r') Up _ _) bs = initialState
+
 handleEvent _ bs = bs
 
 -- | Traz de coordenadas de camera pra coordenadas de xadrez
