@@ -1,4 +1,4 @@
-# chess
+# hasky-chess
 no diretório do repositório:
 ```shell
 $ stack build
