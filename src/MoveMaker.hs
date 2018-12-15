@@ -151,8 +151,10 @@ proxy_check board (row, col) player_c = let
     _:poses = [(row + x, col + y) | x <- [0,1,-1], y <- [0,1,-1]]
     king_checks = foldl (||) False $ map (is_king) poses
     pawn_checks = foldl (||) False $ map (is_pawn) [(row + 1, col + 1), (row + 1, col - 1)]
-    knight_checks = foldl (||) False $ map (is_knight)
-    in king_checks || pawn_checks
+    poses12 = [(row + x, col + y) | x <- [1,-1], y <- [2,-2]]
+    poses21 = [(row + x, col + y) | x <- [2,-2], y <- [1,-1]]
+    knight_checks = foldl (||) False $ map (is_knight) (poses12 ++ poses21)
+    in king_checks || pawn_checks || knight_checks
 
 is_checked :: Board -> SquarePos -> Color -> Bool
 is_checked board pos player_c = let
