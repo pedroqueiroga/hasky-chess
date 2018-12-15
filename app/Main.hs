@@ -2,15 +2,17 @@ module Main where
 
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Game as Game
-import qualified Graphics.Gloss.Interface.Pure.Simulate as Simulate
+import Graphics.Gloss.Interface.Pure.Game hiding (Color)
 import Board
 import BestMove
 import MoveMaker
+import System.IO.Unsafe
+import Data.Maybe (fromJust)
 
 width, height, offset :: Int
 width = 800
 height = 600
-offset = 10
+offset = 0
 
 whitePawn :: Gloss.Picture
 whitePawn = Game.png "pieces/plt60.png"
@@ -69,32 +71,31 @@ mkPieces = mkPieces' (0,0)
         mkPieces' (i,j) b = Gloss.translate (fromIntegral ((j+1)*fator)) (fromIntegral ((i+1)*fator)) (mkPiece (getSquare (i,j) b)) : (if (i < 7) then mkPieces' (i+1, j) b else []) ++ (if (j < 7) then mkPieces' (i, j+1) b else [])
         mkPiece :: Square -> Gloss.Picture
         mkPiece (Just (Piece (Pawn _) c)) = if c == White then whitePawn else blackPawn
-        mkPiece (Just (Piece (Rook) c)) = if c == White then whiteRook else blackRook
+        mkPiece (Just (Piece (Rook _) c)) = if c == White then whiteRook else blackRook
         mkPiece (Just (Piece (Bishop) c)) = if c == White then whiteBishop else blackBishop
         mkPiece (Just (Piece (Knight) c)) = if c == White then whiteKnight else blackKnight
         mkPiece (Just (Piece (Queen) c)) = if c == White then whiteQueen else blackQueen
-        mkPiece (Just (Piece (King) c)) = if c == White then whiteKing else blackKing
+        mkPiece (Just (Piece (King _) c)) = if c == White then whiteKing else blackKing
         mkPiece Nothing = Gloss.blank
 
 data BoardState =
   Game
   {
     board :: Board
-  , gameElapsedTime :: Float
   , currentPlayer :: Color
+  , squareSelected :: Maybe SquarePos
   }
-
 
 renderGame :: BoardState -> Gloss.Picture
 renderGame game = drawBoard (board game)
-  where drawBoard b = Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.scale 1 1 $ Gloss.pictures $ (mkBoard ++ (mkPieces b))
+  where drawBoard b = Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.pictures $ (mkBoard ++ (mkPieces b))
 
 initialState :: BoardState
 initialState = Game
   {
     board = initialBoard
-  , gameElapsedTime = 0
   , currentPlayer = White
+  , squareSelected = Nothing
   }
 
 stepGame :: BoardState -> BoardState
@@ -102,20 +103,62 @@ stepGame bs = bs { board = newBoard, currentPlayer = (other c)}
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
-gameSimulationPeriod :: Float
-gameSimulationPeriod = 1
-
 maxDepth :: Int
 maxDepth = 3
 
-simulateGame :: Simulate.ViewPort -> Float -> BoardState -> BoardState
-simulateGame _ time bs
-  | gameElapsedTime bs >= gameSimulationPeriod
-  = let bs' = stepGame bs
-    in bs' { gameElapsedTime = 0 }
-  | otherwise = bs { gameElapsedTime = gameElapsedTime bs + time }
+playGame :: Float -> BoardState -> BoardState
+playGame _ bs = if currentPlayer bs == Black then stepGame bs else bs
+
+handleEvent :: Event -> BoardState -> BoardState
+handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
+  = unsafePerformIO (do
+                        print mp
+                        return (if (squareSelected bs) == Nothing then bs { squareSelected = Just (fromPixel mp)} else if mb == Nothing then bs { squareSelected = Nothing } else bs {squareSelected = Nothing, board = fromJust mb, currentPlayer = other (currentPlayer bs)}))
+  where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) (currentPlayer bs) (board bs)
+handleEvent (EventKey (MouseButton RightButton) _ _ mp@(x,y)) bs = unsafePerformIO (do print mp
+                                                                                       return bs)
+handleEvent _ bs = bs
+
+-- | Traz de coordenadas de camera pra coordenadas de xadrez
+-- WIDTH
+fromPixelX :: Float -> Int
+fromPixelX x = round $ (x + (fromIntegral fator * 7) / 2) / fromIntegral fator
+
+-- | Traz de coordenadas de camera pra coordenadas de xadrez
+-- HEIGHT
+fromPixelY :: Float -> Int
+fromPixelY y = round $ (y + (fromIntegral fator * 7) / 2) / fromIntegral fator
+        
+-- | Junta fromPixelW e fromPixelH
+fromPixel :: (Float, Float) -> (Int, Int)
+fromPixel (x, y) = unsafePerformIO (do
+                                       let a = (fromPixelX y , fromPixelY x)
+                                       print a
+                                       return a)
+
+
+moveBoard :: SquarePos -> SquarePos -> Color ->  Board -> Maybe Board
+moveBoard sqp0@(i0, j0) sqp'@(i', j') c b = if (length pos_final > 0) then Just (pos_final !! 0) else Nothing
+  where piece0 = unsafePerformIO (do
+                                     let a = getSquare sqp0 b
+                                     print a
+                                     return a)
+        pos0move = pos_move b piece0 sqp0 c
+        pos_final = [x | x <- unsafePerformIO (
+                        do let a = pos0move
+                           print a
+                           return a)
+                       , rlxEqPcs (x !! i' !! j') piece0
+                       , x !! i0 !! j0 == Nothing]
+
+rlxEqPcs :: Square -> Square -> Bool
+rlxEqPcs (Just (Piece (Pawn _) c)) (Just (Piece (Pawn _) c')) = c == c'
+rlxEqPcs (Just (Piece (Rook _) c)) (Just (Piece (Rook _) c')) = c == c'
+rlxEqPcs (Just (Piece (King _) c)) (Just (Piece (King _) c')) = c == c'
+rlxEqPcs p p' = p == p'
+
 
 main :: IO ()
 main = do
-  Gloss.simulate window backGround 20 initialState renderGame simulateGame
+  Gloss.play window backGround 20 initialState renderGame handleEvent playGame
 

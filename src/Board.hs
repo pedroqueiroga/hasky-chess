@@ -74,7 +74,3 @@ getKing c b = getKing' 0 b
               where fi1 = findIndex ((==) (Just (Piece (King Unmov) c))) x
 
     getKing' _ [] = Nothing
-
--- moveBoard :: SquarePos -> SquarePos -> Board -> Board
--- moveBoard (i0, j0) (i', j') b = concat b
-

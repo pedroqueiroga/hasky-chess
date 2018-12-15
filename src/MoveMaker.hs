@@ -1,5 +1,5 @@
 module MoveMaker
-  ( possible_moves
+  ( possible_moves, pos_move
   ) where
 
 import Board
