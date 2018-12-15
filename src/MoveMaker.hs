@@ -141,15 +141,18 @@ proxy_check board (row, col) player_c = let
     is_pawn (r, c) = let
         target = ((board!!r)!!c)
         (Just (Piece pt clr)) = target
-        in (target /= Nothing) && (clr /= player_c) && (pt == Pawn Normal || pt == Pawn MakeMePassant || pt == Pawn Passant || pt == Pawn Starting)
+        oob = out_of_bounds (r,c)
+        in (not oob) && (target /= Nothing) && (clr /= player_c) && (pt == Pawn Normal || pt == Pawn MakeMePassant || pt == Pawn Passant || pt == Pawn Starting)
     is_king (r, c) = let
         target = ((board!!r)!!c)
         Just (Piece pt clr) = target
-        in (target /= Nothing) && (clr /= player_c) && (pt == King Unmov || pt == King Moved)
+        oob = out_of_bounds (r,c)
+        in (not oob) && (target /= Nothing) && (clr /= player_c) && (pt == King Unmov || pt == King Moved)
     is_knight (r, c) = let
         target = ((board!!r)!!c)
         (Just (Piece pt clr)) = target
-        in (target /= Nothing) && (clr /= player_c) && (pt == Knight)
+        oob = out_of_bounds (r,c)
+        in (not oob) && (target /= Nothing) && (clr /= player_c) && (pt == Knight)
     _:poses = [(row + x, col + y) | x <- [0,1,-1], y <- [0,1,-1]]
     king_checks = foldl (||) False $ map (is_king) poses
     pawn_checks = foldl (||) False $ map (is_pawn) [(row + 1, col + 1), (row + 1, col - 1)]
@@ -166,7 +169,7 @@ is_checked board pos player_c = let
     cardfuncs = [(\(r, c) -> (r + x, c + y)) | x <- [-1, 0, 1], y <- [-1, 0, 1], (==) 1 $ abs(x) + abs(y)]
     cards = foldl (||) False [card_check board (foo pos) player_c foo | foo <- cardfuncs]
     proxy = proxy_check board pos player_c
-    in (not oob) || (diags) || (cards) || (proxy)
+    in (not oob) && ((diags) || (cards) || (proxy))
 
 king_move :: Board -> SquarePos -> Square -> Color -> [Board]
 king_move board (row, col) square player_c = let
@@ -199,6 +202,10 @@ pos_move :: Board -> Square -> SquarePos -> Color -> [Board]
 pos_move _ Nothing _ _ = []
 pos_move board piece pos player_c = let
     board_minus_piece = place_piece board pos Nothing
+    kingpos = getKing player_c
+    unwrap a = b
+        where Just b = a
+    board_checked b = is_checked b (unwrap (kingpos b)) player_c
     move_func = case pt of
         (Pawn _) -> pawn_move
         Knight -> knight_move
@@ -206,9 +213,9 @@ pos_move board piece pos player_c = let
         Rook _ -> rook_move
         Queen -> queen_move
         King _ -> king_move
-    in if (piece_c /= player_c)
+    in if (piece_c /= player_c || kingpos board == Nothing)
         then []
-        else move_func board_minus_piece pos piece player_c
+        else filter (not . board_checked) $ move_func board_minus_piece pos piece player_c
         where (Just (Piece pt piece_c)) = piece
 
 possible_moves :: Board -> Color -> [Board]
