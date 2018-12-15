@@ -118,9 +118,9 @@ pos_move board piece pos player_c = let
         (Pawn _) -> pawn_move
         Knight -> knight_move
         Bishop -> bishop_move
-        Rook -> rook_move
+        (Rook _) -> rook_move
         Queen -> queen_move
-        King -> king_move
+        (King _) -> king_move
     in if (piece_c /= player_c)
         then []
         else move_func board_minus_piece pos piece player_c
