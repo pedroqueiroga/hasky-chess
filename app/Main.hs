@@ -103,7 +103,7 @@ stepGame bs = bs { board = newBoard, currentPlayer = (other c)}
         c = currentPlayer bs
 
 gameSimulationPeriod :: Float
-gameSimulationPeriod = 5
+gameSimulationPeriod = 1
 
 maxDepth :: Int
 maxDepth = 3
