@@ -93,6 +93,7 @@ data BoardState =
   , lastMousePos :: Maybe SquarePos
   , currentTips :: [SquarePos]
   , fim :: Bool
+  , history :: [Board]
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -109,6 +110,7 @@ initialState = Game
   , lastMousePos = Nothing
   , currentTips = []
   , fim = False
+  , history = []
   }
 
 stepGame :: BoardState -> BoardState
@@ -136,7 +138,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
                 then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
-                else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [] }
+                else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
 
@@ -154,6 +156,12 @@ handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
 
 handleEvent (EventKey (Char 'r') Up _ _) bs = initialState
 
+handleEvent (EventKey (Char 'u') Up _ _) bs
+  | history bs == [] = bs
+  | otherwise =
+  bs {board = head, history = tail}
+  where head:tail = history bs
+
 handleEvent _ bs = bs
 
 -- | Traz de coordenadas de camera pra coordenadas de xadrez
@@ -165,7 +173,7 @@ fromPixelX x = round $ (x + (fromIntegral fator * 7) / 2) / fromIntegral fator
 -- HEIGHT
 fromPixelY :: Float -> Int
 fromPixelY y = round $ (y + (fromIntegral fator * 7) / 2) / fromIntegral fator
-        
+
 -- | Junta fromPixelW e fromPixelH
 fromPixel :: (Float, Float) -> SquarePos
 fromPixel (x, y) = (fromPixelX y , fromPixelY x)
@@ -192,7 +200,7 @@ possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl 
         sq = if cmp /= Nothing then Just $ getSquare (fromJust cmp) b else Nothing
         movesCmp :: [Board]
         movesCmp = if sq /= Nothing then pos_move (board bs) (fromJust sq) (fromJust cmp) White else []
-                    
+
 
 
 main :: IO ()
