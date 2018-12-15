@@ -12,6 +12,8 @@ module Board
   , isPieceColor
   , isPieceColorPos
   , getKing
+  , rlxEqPcs
+  , getPiecePositions
   , other
   ) where
 
@@ -74,3 +76,15 @@ getKing c b = getKing' 0 b
               where fi1 = findIndex ((==) (Just (Piece (King Unmov) c))) x
 
     getKing' _ [] = Nothing
+
+rlxEqPcs :: Square -> Square -> Bool
+rlxEqPcs (Just (Piece (Pawn _) c)) (Just (Piece (Pawn _) c')) = c == c'
+rlxEqPcs (Just (Piece (Rook _) c)) (Just (Piece (Rook _) c')) = c == c'
+rlxEqPcs (Just (Piece (King _) c)) (Just (Piece (King _) c')) = c == c'
+rlxEqPcs p p' = p == p'
+
+getPiecePositions :: Board -> Square -> [SquarePos]
+getPiecePositions b sq = [(i,j) | rank <- b
+                                , i <- [0..length b - 1]
+                                , j <- [0..length b - 1]
+                                , rlxEqPcs (getSquare (i,j) b) sq]
