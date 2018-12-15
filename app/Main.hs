@@ -62,7 +62,6 @@ backGround = Gloss.black
 
 fator = (width `div` 15) :: Int
 
-
 mkBoard :: BoardState -> [Gloss.Picture]
 mkBoard bs = [(Gloss.translate (fromIntegral (x)) (fromIntegral (y)) $ Gloss.color (if ((x `div` fator `mod` 2 == 1 && y `div` fator `mod` 2 == 1) || (x `div` fator `mod` 2 == 0 && y `div` fator `mod` 2 == 0))
                                                                                     then Gloss.greyN (0.5 - ifpp (y`div`fator - 1,x`div`fator - 1)) else Gloss.greyN (1 - ifpp (y`div`fator - 1 ,x`div`fator - 1))) $ Gloss.rectangleSolid (fromIntegral fator)  (fromIntegral fator)) | x <- (map (*fator) [1..8]), y <- (map (*fator) [1..8])]
@@ -93,7 +92,12 @@ data BoardState =
   , lastMousePos :: Maybe SquarePos
   , currentTips :: [SquarePos]
   , fim :: Bool
+<<<<<<< HEAD
   , history :: [Board]
+=======
+  , goBots :: Bool
+  , elapsedTime :: Float
+>>>>>>> 82c8e8cf3af320d1e65d37e84b4688082f3a7cad
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -110,7 +114,12 @@ initialState = Game
   , lastMousePos = Nothing
   , currentTips = []
   , fim = False
+<<<<<<< HEAD
   , history = []
+=======
+  , goBots = False
+  , elapsedTime = 0
+>>>>>>> 82c8e8cf3af320d1e65d37e84b4688082f3a7cad
   }
 
 stepGame :: BoardState -> BoardState
@@ -126,14 +135,19 @@ maxDepth :: Int
 maxDepth = 3
 
 playGame :: Float -> BoardState -> BoardState
-playGame _ bs = if currentPlayer bs == Black then stepGame bs else bs
+playGame elapTime bs = if goBots bs
+                       then if ((elapsedTime bs) > 2)
+                            then stepGame bs { elapsedTime = 0 }
+                            else bs { elapsedTime = elapsedTime bs + elapTime }
+                       else if currentPlayer bs == Black
+                            then stepGame bs else bs
 
 handleEvent :: Event -> BoardState -> BoardState
 handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
   = if fim bs == True then initialState
     else
       if (squareSelected bs) == Nothing
-      then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
+      then bs { squareSelected = if (isPiecePosUnsafe (fromPixel mp) (board bs)) then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
@@ -141,6 +155,9 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
+        isPiecePosUnsafe (x, y) b = if (x < 0 || x > 7 || y < 0 || y > 7)
+                                    then False
+                                    else isPiecePos (x, y) b
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
@@ -155,6 +172,8 @@ handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
     else bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
 
 handleEvent (EventKey (Char 'r') Up _ _) bs = initialState
+handleEvent (EventKey (Char 'b') Up _ _) bs = bs { goBots = True }
+handleEvent (EventKey (Char 'p') Up _ _) bs = bs { goBots = False }
 
 handleEvent (EventKey (Char 'u') Up _ _) bs
   | history bs == [] = bs
