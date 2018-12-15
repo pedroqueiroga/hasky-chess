@@ -92,6 +92,7 @@ data BoardState =
   , currentMousePos :: Maybe SquarePos
   , lastMousePos :: Maybe SquarePos
   , currentTips :: [SquarePos]
+  , fim :: Bool
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -107,12 +108,15 @@ initialState = Game
   , currentMousePos = Nothing
   , lastMousePos = Nothing
   , currentTips = []
+  , fim = False
   }
 
 stepGame :: BoardState -> BoardState
-stepGame bs = if (getKing (other c) newBoard) == Nothing
-              then initialState
-              else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
+stepGame bs = if fim bs == True
+              then bs
+                else if length (possible_moves newBoard (other c)) == 0
+                     then bs { board = newBoard, fim = True, currentTips = [] }
+                     else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
@@ -124,25 +128,29 @@ playGame _ bs = if currentPlayer bs == Black then stepGame bs else bs
 
 handleEvent :: Event -> BoardState -> BoardState
 handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
-  = if (squareSelected bs) == Nothing
-    then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
-    else if mb == Nothing
-         then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
-         else if (getKing (other c) (fromJust mb)) == Nothing
-              then initialState
-              else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [] }
+  = if fim bs == True then initialState
+    else
+      if (squareSelected bs) == Nothing
+      then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
+      else if mb == Nothing
+           then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+           else if length (possible_moves (fromJust mb) (other c)) == 0
+                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
+                else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [] }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
-  then bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = possiblePositions bs }
+  then bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = if fim bs == True then [] else possiblePositions bs }
   else bs
   where bmp@(bmpx, bmpy) = fromPixel mp
         curPos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp
 
 handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
-  = bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+  = if fim bs == True
+    then initialState
+    else bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
 
 handleEvent _ bs = bs
 

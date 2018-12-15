@@ -17,12 +17,14 @@ bestMove n b c
 evalB b c | c == White = evaluateBoard b
           | c == Black = -(evaluateBoard b)
 
+chequeMate = 99999999
+
 miniMax :: Color -> Int -> Bool -> Board -> Color -> Int -> Int -> Int
 miniMax trueC 0 _ b c _ _ = evalB b trueC
 
 -- cada elemento de list' tem um ramo. o elemento de maior(ou menor) eval eh o
 -- RAMO que devo escolher
-miniMax trueC n True b c alpha beta = case newMoves of [] -> evalB b trueC
+miniMax trueC n True b c alpha beta = case newMoves of [] -> -(chequeMate)
                                                        l -> forEach (-99999999) alpha beta newMoves
   where newMoves = possible_moves b c
         mm try alpha' beta' = miniMax trueC (n-1) False try (other c) alpha' beta'
@@ -33,7 +35,7 @@ miniMax trueC n True b c alpha beta = case newMoves of [] -> evalB b trueC
                 maxav  = max alpha' maxvmm
         forEach value alpha' beta [] = value
  
-miniMax trueC n False b c alpha beta = case newMoves of [] -> evalB b trueC
+miniMax trueC n False b c alpha beta = case newMoves of [] -> chequeMate
                                                         l -> forEach (99999999) alpha beta newMoves
   where newMoves = possible_moves b c
         mm try alpha' beta' = miniMax trueC (n-1) True try (other c) alpha' beta'
