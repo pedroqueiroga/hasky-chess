@@ -62,7 +62,6 @@ backGround = Gloss.black
 
 fator = (width `div` 15) :: Int
 
-
 mkBoard :: BoardState -> [Gloss.Picture]
 mkBoard bs = [(Gloss.translate (fromIntegral (x)) (fromIntegral (y)) $ Gloss.color (if ((x `div` fator `mod` 2 == 1 && y `div` fator `mod` 2 == 1) || (x `div` fator `mod` 2 == 0 && y `div` fator `mod` 2 == 0))
                                                                                     then Gloss.greyN (0.5 - ifpp (y`div`fator - 1,x`div`fator - 1)) else Gloss.greyN (1 - ifpp (y`div`fator - 1 ,x`div`fator - 1))) $ Gloss.rectangleSolid (fromIntegral fator)  (fromIntegral fator)) | x <- (map (*fator) [1..8]), y <- (map (*fator) [1..8])]
@@ -93,6 +92,8 @@ data BoardState =
   , lastMousePos :: Maybe SquarePos
   , currentTips :: [SquarePos]
   , fim :: Bool
+  , goBots :: Bool
+  , elapsedTime :: Float
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -109,6 +110,8 @@ initialState = Game
   , lastMousePos = Nothing
   , currentTips = []
   , fim = False
+  , goBots = False
+  , elapsedTime = 0
   }
 
 stepGame :: BoardState -> BoardState
@@ -124,7 +127,12 @@ maxDepth :: Int
 maxDepth = 3
 
 playGame :: Float -> BoardState -> BoardState
-playGame _ bs = if currentPlayer bs == Black then stepGame bs else bs
+playGame elapTime bs = if goBots bs
+                       then if ((elapsedTime bs) > 2)
+                            then stepGame bs { elapsedTime = 0 }
+                            else bs { elapsedTime = elapsedTime bs + elapTime }
+                       else if currentPlayer bs == Black
+                            then stepGame bs else bs
 
 handleEvent :: Event -> BoardState -> BoardState
 handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
@@ -156,6 +164,8 @@ handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
     else bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
 
 handleEvent (EventKey (Char 'r') Up _ _) bs = initialState
+handleEvent (EventKey (Char 'b') Up _ _) bs = bs { goBots = True }
+handleEvent (EventKey (Char 'p') Up _ _) bs = bs { goBots = False }
 
 handleEvent _ bs = bs
 
