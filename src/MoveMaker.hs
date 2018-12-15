@@ -106,7 +106,9 @@ rook_move :: Board -> SquarePos -> Square -> Color -> [Board]
 rook_move board pos _ player_c = foldl (++) [] $ map (laser_beam board pos (Just $ Piece (Rook Moved) player_c) player_c) rook_func_list
 
 queen_move :: Board -> SquarePos -> Square -> Color -> [Board]
-queen_move a b c d = (rook_move a b c d) ++ (bishop_move a b c d)
+queen_move a b c d = let
+    rooklike_move board pos piece player_c = foldl (++) [] $ map (laser_beam board pos piece player_c) rook_func_list
+    in (rooklike_move a b c d) ++ (bishop_move a b c d)
 
 diag_check :: Board -> SquarePos -> Color -> (SquarePos -> SquarePos) -> Bool
 diag_check board (row, col) player_c laser = let
