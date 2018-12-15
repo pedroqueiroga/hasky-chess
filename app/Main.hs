@@ -67,16 +67,7 @@ mkBoard :: BoardState -> [Gloss.Picture]
 mkBoard bs = [(Gloss.translate (fromIntegral (x)) (fromIntegral (y)) $ Gloss.color (if ((x `div` fator `mod` 2 == 1 && y `div` fator `mod` 2 == 1) || (x `div` fator `mod` 2 == 0 && y `div` fator `mod` 2 == 0))
                                                                                     then Gloss.greyN (0.5 - ifpp (y`div`fator - 1,x`div`fator - 1)) else Gloss.greyN (1 - ifpp (y`div`fator - 1 ,x`div`fator - 1))) $ Gloss.rectangleSolid (fromIntegral fator)  (fromIntegral fator)) | x <- (map (*fator) [1..8]), y <- (map (*fator) [1..8])]
   where
-    b = board bs
-    cmp :: Maybe SquarePos
-    cmp = currentMousePos bs
-    sq :: Maybe Square
-    sq = if cmp /= Nothing then Just $ getSquare (fromJust cmp) b else Nothing
-    movesCmp :: [Board]
-    movesCmp = if sq /= Nothing then pos_move (board bs) (fromJust sq) (fromJust cmp) White else []
-    possiblePositions :: Board -> [Board] -> [SquarePos]
-    possiblePositions b nextB = if sq /= Nothing then Set.toList $ Set.difference (foldl (Set.union) (Set.fromList []) [Set.fromList altpos | bToSee <- nextB, let altpos = getPiecePositions bToSee (fromJust sq)]) (Set.fromList $ getPiecePositions b (fromJust sq)) else []
-    pintandoPossivel (x,y) = elem (x,y) $ possiblePositions b movesCmp
+    pintandoPossivel (x,y) = elem (x,y) $ currentTips bs
     ifpp (x,y) = if currentPlayer bs == White && pintandoPossivel (x,y) then 0.2 else 0
 
 mkPieces :: Board -> [Gloss.Picture]
@@ -99,6 +90,8 @@ data BoardState =
   , currentPlayer :: Color
   , squareSelected :: Maybe SquarePos
   , currentMousePos :: Maybe SquarePos
+  , lastMousePos :: Maybe SquarePos
+  , currentTips :: [SquarePos]
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -112,10 +105,12 @@ initialState = Game
   , currentPlayer = White
   , squareSelected = Nothing
   , currentMousePos = Nothing
+  , lastMousePos = Nothing
+  , currentTips = []
   }
 
 stepGame :: BoardState -> BoardState
-stepGame bs = bs { board = newBoard, currentPlayer = (other c)}
+stepGame bs = bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
@@ -127,10 +122,23 @@ playGame _ bs = if currentPlayer bs == Black then stepGame bs else bs
 
 handleEvent :: Event -> BoardState -> BoardState
 handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
-  = if (squareSelected bs) == Nothing then bs { squareSelected = Just (fromPixel mp)} else if mb == Nothing then bs { squareSelected = Nothing } else bs {squareSelected = Nothing, board = fromJust mb, currentPlayer = other (currentPlayer bs)}
+  = if (squareSelected bs) == Nothing
+    then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
+    else if mb == Nothing
+         then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+         else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other (currentPlayer bs), currentTips = [] }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) (currentPlayer bs) (board bs)
-handleEvent (EventMotion mp@(x,y)) bs = bs { currentMousePos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp }
+
+handleEvent (EventMotion mp@(x,y)) bs =
+  if lastMousePos bs /= curPos
+  then bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = possiblePositions bs }
+  else bs
   where bmp@(bmpx, bmpy) = fromPixel mp
+        curPos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp
+
+handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
+  = bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+
 handleEvent _ bs = bs
 
 -- | Traz de coordenadas de camera pra coordenadas de xadrez
@@ -160,8 +168,18 @@ moveBoard sqp0@(i0, j0) sqp'@(i', j') c b
                        , rlxEqPcs (x !! i' !! j') piece0
                        , x !! i0 !! j0 == Nothing]
 
+possiblePositions :: BoardState -> [SquarePos]
+possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl (Set.union) (Set.fromList []) [Set.fromList altpos | bToSee <- movesCmp, let altpos = getPiecePositions bToSee (fromJust sq)]) (Set.fromList $ getPiecePositions b (fromJust sq)) else []
+  where b = board bs
+        cmp :: Maybe SquarePos
+        cmp = if squareSelected bs == Nothing then currentMousePos bs else squareSelected bs
+        sq :: Maybe Square
+        sq = if cmp /= Nothing then Just $ getSquare (fromJust cmp) b else Nothing
+        movesCmp :: [Board]
+        movesCmp = if sq /= Nothing then pos_move (board bs) (fromJust sq) (fromJust cmp) White else []
+                    
+
 
 main :: IO ()
 main = do
   Gloss.play window backGround 60 initialState renderGame handleEvent playGame
-
