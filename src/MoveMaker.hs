@@ -6,9 +6,12 @@ import Board
 
 data TargetType = Friendly | Enemy | PassantEnemy | Outside | Empty deriving (Show, Eq)
 
+out_of_bounds :: SquarePos -> Bool
+out_of_bounds (row, col) = (row < 0) || (col < 0) || (row > 7) || (col > 7)
+
 get_type :: Board -> SquarePos -> Color -> TargetType
 get_type board (row, col) player_c = let
-    oob = (row < 0) || (col < 0) || (row > 7) || (col > 7)
+    oob = out_of_bounds (row, col)
     target = (board!!row)!!col
     target_t = case target of
         Nothing -> Empty
@@ -100,15 +103,93 @@ rook_func_list :: [SquarePos -> SquarePos]
 rook_func_list = [(\(x, y) -> (x + xd, y + yd)) | xd <- [0, 1,-1], yd <- [0, 1,-1], (==) 1 $ abs(xd) + abs(yd)]
 
 rook_move :: Board -> SquarePos -> Square -> Color -> [Board]
-rook_move board pos square player_c = foldl (++) [] $ map (laser_beam board pos square player_c) rook_func_list
+rook_move board pos _ player_c = foldl (++) [] $ map (laser_beam board pos (Just $ Piece (Rook Moved) player_c) player_c) rook_func_list
 
 queen_move :: Board -> SquarePos -> Square -> Color -> [Board]
 queen_move a b c d = (rook_move a b c d) ++ (bishop_move a b c d)
 
+diag_check :: Board -> SquarePos -> Color -> (SquarePos -> SquarePos) -> Bool
+diag_check board (row, col) player_c laser = let
+    oob = out_of_bounds (row, col)
+    threat = case ((board!!row)!!col) of
+        Nothing -> diag_check board (laser (row, col)) player_c laser
+        Just (Piece pt clr) ->
+            if (clr == player_c)
+            then False
+            else if (pt == Bishop || pt == Queen)
+                then True
+                else False
+    in (not oob) && threat
+
+card_check :: Board -> SquarePos -> Color -> (SquarePos -> SquarePos) -> Bool
+card_check board (row, col) player_c laser = let
+    oob = out_of_bounds (row, col)
+    threat = case ((board!!row)!!col) of
+        Nothing -> card_check board (laser (row, col)) player_c laser
+        Just (Piece pt clr) ->
+            if (clr == player_c)
+            then False
+            else if (pt == (Rook Unmov) || pt == (Rook Moved) || pt == Queen)
+                then True
+                else False
+    in (not oob) && threat
+
+proxy_check :: Board -> SquarePos -> Color -> Bool
+proxy_check board (row, col) player_c = let
+    is_pawn (r, c) = let
+        target = ((board!!r)!!c)
+        (Just (Piece pt clr)) = target
+        in (target /= Nothing) && (clr /= player_c) && (pt == Pawn Normal || pt == Pawn MakeMePassant || pt == Pawn Passant || pt == Pawn Starting)
+    is_king (r, c) = let
+        target = ((board!!r)!!c)
+        Just (Piece pt clr) = target
+        in (target /= Nothing) && (clr /= player_c) && (pt == King Unmov || pt == King Moved)
+    is_knight (r, c) = let
+        target = ((board!!r)!!c)
+        (Just (Piece pt clr)) = target
+        in (target /= Nothing) && (clr /= player_c) && (pt == Knight)
+    _:poses = [(row + x, col + y) | x <- [0,1,-1], y <- [0,1,-1]]
+    king_checks = foldl (||) False $ map (is_king) poses
+    pawn_checks = foldl (||) False $ map (is_pawn) [(row + 1, col + 1), (row + 1, col - 1)]
+    knight_checks = foldl (||) False $ map (is_knight)
+    in king_checks || pawn_checks
+
+is_checked :: Board -> SquarePos -> Color -> Bool
+is_checked board pos player_c = let
+    oob = out_of_bounds pos
+    diagfuncs = [(\(r, c) -> (r + x, c + y)) | x <- [-1, 1], y <- [-1, 1]]
+    diags = foldl (||) False [diag_check board (foo pos) player_c foo | foo <- diagfuncs]
+    cardfuncs = [(\(r, c) -> (r + x, c + y)) | x <- [-1, 0, 1], y <- [-1, 0, 1], (==) 1 $ abs(x) + abs(y)]
+    cards = foldl (||) False [card_check board (foo pos) player_c foo | foo <- cardfuncs]
+    proxy = proxy_check board pos player_c
+    in (not oob) || (diags) || (cards) || (proxy)
+
 king_move :: Board -> SquarePos -> Square -> Color -> [Board]
 king_move board (row, col) square player_c = let
     _:poses = [(row + x, col + y) | x <- [0,1,-1], y <- [0,1,-1]]
-    in foldl (++) [] $ map (piece_attempt_move board square player_c) poses
+    std_moves = foldl (++) [] $ map (piece_attempt_move board (Just $ Piece (King Moved) player_c) player_c) poses
+
+    k_unmoved = square == (Just $ Piece (King Unmov) player_c)
+    k_uncheck = not $ is_checked board (row, col) player_c
+    ksr_unmov = ((board!!0)!!7) == (Just $ Piece (Rook Unmov) player_c)
+    qsr_unmov = ((board!!0)!!0) == (Just $ Piece (Rook Unmov) player_c)
+    empty_and_unchecked p = get_type board p player_c == Empty && not (is_checked board p player_c)
+    qs_extra_slot_empty = get_type board (0, 1) player_c == Empty
+    can_ks_castle = k_unmoved && k_uncheck && ksr_unmov && (foldl (&&) True [empty_and_unchecked p | p <- [(row, col + 1), (row, col + 2)]])
+    can_qs_castle = k_unmoved && k_uncheck && qsr_unmov && (foldl (&&) True [empty_and_unchecked p | p <- [(row, col - 1), (row, col - 2)]]) && qs_extra_slot_empty
+    ks_king_placed = place_piece board (0, 6) (Just $ (Piece (King Moved) player_c))
+    qs_king_placed = place_piece board (0, 2) (Just $ (Piece (King Moved) player_c))
+    ks_rook_placed = place_piece ks_king_placed (0, 5) (Just $ (Piece (Rook Moved) player_c))
+    qs_rook_placed = place_piece qs_king_placed (0, 3) (Just $ (Piece (Rook Moved) player_c))
+    ks_oldrook_removed = place_piece ks_rook_placed (0, 7) Nothing
+    qs_oldrook_removed = place_piece qs_rook_placed (0, 0) Nothing
+    ks_castle = if (can_ks_castle)
+        then [ks_oldrook_removed]
+        else []
+    qs_castle = if (can_qs_castle)
+        then [qs_oldrook_removed]
+        else []
+    in std_moves ++ ks_castle ++ qs_castle
 
 pos_move :: Board -> Square -> SquarePos -> Color -> [Board]
 pos_move _ Nothing _ _ = []
@@ -118,9 +199,9 @@ pos_move board piece pos player_c = let
         (Pawn _) -> pawn_move
         Knight -> knight_move
         Bishop -> bishop_move
-        (Rook _) -> rook_move
+        Rook _ -> rook_move
         Queen -> queen_move
-        (King _) -> king_move
+        King _ -> king_move
     in if (piece_c /= player_c)
         then []
         else move_func board_minus_piece pos piece player_c
