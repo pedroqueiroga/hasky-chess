@@ -110,7 +110,9 @@ initialState = Game
   }
 
 stepGame :: BoardState -> BoardState
-stepGame bs = bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
+stepGame bs = if (getKing (other c) newBoard) == Nothing
+              then initialState
+              else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
@@ -126,8 +128,11 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
     then bs { squareSelected = Just (fromPixel mp), currentTips = possiblePositions bs }
     else if mb == Nothing
          then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
-         else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other (currentPlayer bs), currentTips = [] }
-  where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) (currentPlayer bs) (board bs)
+         else if (getKing (other c) (fromJust mb)) == Nothing
+              then initialState
+              else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [] }
+  where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
+        c = currentPlayer bs
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
@@ -182,4 +187,4 @@ possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl 
 
 main :: IO ()
 main = do
-  Gloss.play window backGround 60 initialState renderGame handleEvent playGame
+  Gloss.play window backGround 30 initialState renderGame handleEvent playGame
