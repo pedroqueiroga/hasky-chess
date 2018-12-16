@@ -92,12 +92,9 @@ data BoardState =
   , lastMousePos :: Maybe SquarePos
   , currentTips :: [SquarePos]
   , fim :: Bool
-<<<<<<< HEAD
   , history :: [Board]
-=======
   , goBots :: Bool
   , elapsedTime :: Float
->>>>>>> 82c8e8cf3af320d1e65d37e84b4688082f3a7cad
   }
 
 renderGame :: BoardState -> Gloss.Picture
@@ -114,12 +111,9 @@ initialState = Game
   , lastMousePos = Nothing
   , currentTips = []
   , fim = False
-<<<<<<< HEAD
   , history = []
-=======
   , goBots = False
   , elapsedTime = 0
->>>>>>> 82c8e8cf3af320d1e65d37e84b4688082f3a7cad
   }
 
 stepGame :: BoardState -> BoardState
@@ -151,7 +145,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
-                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
+                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [], history = (board bs):(history bs) }
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
@@ -178,7 +172,7 @@ handleEvent (EventKey (Char 'p') Up _ _) bs = bs { goBots = False }
 handleEvent (EventKey (Char 'u') Up _ _) bs
   | history bs == [] = bs
   | otherwise =
-  bs {board = head, history = tail}
+  bs { board = head, history = tail, fim = False, elapsedTime = 0 }
   where head:tail = history bs
 
 handleEvent _ bs = bs
