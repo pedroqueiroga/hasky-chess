@@ -120,7 +120,7 @@ stepGame bs = if fim bs == True
               then bs
                 else if length (possible_moves newBoard (other c)) == 0
                      then bs { board = newBoard, currentPlayer = (other c), fim = True, currentTips = [] }
-                     else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
+                     else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs { board = newBoard, currentPlayer = (other c), currentTips = [] } }
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
@@ -140,7 +140,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
   = if fim bs == True then initialState
     else
       if (squareSelected bs) == Nothing
-      then bs { squareSelected = if (isPieceColorPosUnsafe (fromPixel mp) (board bs)) then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
+      then bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
@@ -211,7 +211,7 @@ possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl 
         sq :: Maybe Square
         sq = if cmp /= Nothing then Just $ getSquare (fromJust cmp) b else Nothing
         movesCmp :: [Board]
-        movesCmp = if sq /= Nothing then pos_move (board bs) (fromJust sq) (fromJust cmp) White else []
+        movesCmp = if sq /= Nothing then pos_move (board bs) (fromJust sq) (fromJust cmp) (currentPlayer bs) else []
 
 
 
