@@ -26,6 +26,7 @@ dependencies:
 - gloss-juicy >= 0.2.2
 - gloss-game >= 0.3.0.0
 - containers
+- stm
 
 library:
   source-dirs: src

@@ -8,6 +8,9 @@ import BestMove
 import MoveMaker
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Monad
 
 width, height, offset :: Int
 width = 800
@@ -96,9 +99,11 @@ data BoardState =
   , elapsedTime :: Float
   }
 
-renderGame :: BoardState -> IO Gloss.Picture
-renderGame game = drawBoard (board game)
-  where drawBoard b = return $ Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.pictures $ ((mkBoard game) ++ (mkPieces b))
+renderGame :: TVar BoardState -> IO Gloss.Picture
+renderGame game = do
+  g <- readTVarIO game
+  let b = board g
+  return $ Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.pictures $ ((mkBoard g) ++ (mkPieces b))
 
 initialState :: BoardState
 initialState = Game
@@ -125,51 +130,107 @@ stepGame bs = if fim bs == True
         c = currentPlayer bs
 
 maxDepth :: Int
-maxDepth = 5
+maxDepth = 4
 
-playGame :: Float -> BoardState -> IO BoardState
-playGame elapTime bs = return $ if goBots bs
+playGame :: Float -> TVar BoardState -> IO (TVar BoardState)
+playGame elapTime mbs = return mbs {-return $ if goBots bs
                                 then if ((elapsedTime bs) > 1)
                                      then stepGame bs { elapsedTime = 0 }
                                      else bs { elapsedTime = elapsedTime bs + elapTime }
                                 else if currentPlayer bs == Black
-                                     then stepGame bs else bs
+                                     then stepGame bs else bs-}
 
-handleEvent :: Event -> BoardState -> IO BoardState
-handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
-  = if fim bs == True then return initialState
+handleEvent :: Event -> TVar BoardState -> IO (TVar BoardState)
+handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) mbs
+  = do
+  bs <- readTVarIO mbs
+  let c = currentPlayer bs
+  let mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
+  if fim bs == True then atomically (do
+                                        writeTVar mbs initialState
+                                        return mbs
+                                    )
     else
       if (squareSelected bs) == Nothing
-      then return bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
+      then atomically (do
+                          writeTVar mbs bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
+                          return mbs
+                      )
       else if mb == Nothing
-           then return bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+           then atomically (do
+                               writeTVar mbs bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+                               return mbs
+                           )
            else if length (possible_moves (fromJust mb) (other c)) == 0
-                then return bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
-                else return bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
-  where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
-        c = currentPlayer bs
+                then atomically (do
+                                    writeTVar mbs bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
+                                    return mbs
+                                )
+                else atomically (do
+                                    writeTVar mbs bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
+                                    return mbs
+                     )
+  where 
 
-handleEvent (EventMotion mp@(x,y)) bs =
+handleEvent (EventMotion mp@(x,y)) mbs
+  = do
+  bs <- readTVarIO mbs
+  let bmp@(bmpx, bmpy) = fromPixel mp
+  let curPos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp
   if lastMousePos bs /= curPos
-  then return bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = if fim bs == True then [] else possiblePositions bs }
-  else return bs
-  where bmp@(bmpx, bmpy) = fromPixel mp
-        curPos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp
+    then atomically (do
+                        writeTVar mbs bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = if fim bs == True then [] else possiblePositions bs }
+                        return mbs
+                    )
+    else atomically (do
+                        writeTVar mbs bs
+                        return mbs
+                    )
 
-handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
-  = if fim bs == True
-    then return initialState
-    else return bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) mbs
+  = (do
+        bs <- readTVarIO mbs
+        if fim bs == True
+          then atomically (do
+                              writeTVar mbs initialState
+                              return mbs
+                          )
+          else atomically (do
+                              writeTVar mbs bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+                              return mbs
+                          )
+    )
 
-handleEvent (EventKey (Char 'r') Up _ _) bs = return initialState
-handleEvent (EventKey (Char 'b') Up _ _) bs = return bs { goBots = True }
-handleEvent (EventKey (Char 'p') Up _ _) bs = return bs { goBots = False }
+handleEvent (EventKey (Char 'r') Up _ _) mbs = atomically (
+  do
+    writeTVar mbs initialState
+    return mbs
+  )
+handleEvent (EventKey (Char 'b') Up _ _) mbs = do
+  bs <- readTVarIO mbs
+  atomically (
+    do
+      writeTVar mbs bs { goBots = True }
+      return mbs
+    )
+handleEvent (EventKey (Char 'p') Up _ _) mbs = do
+  bs <- readTVarIO mbs
+  atomically (do
+                 writeTVar mbs bs { goBots = False }
+                 return mbs
+             )
 
-handleEvent (EventKey (Char 'u') Up _ _) bs
-  | history bs == [] = return bs
-  | otherwise =
-  return bs { board = head, history = tail, fim = False, elapsedTime = 0 }
-  where head:tail = history bs
+handleEvent (EventKey (Char 'u') Up _ _) mbs = (
+  do
+    bs <- readTVarIO mbs
+    let head:tail = history bs
+    if history bs == [] then return mbs
+      else atomically (
+      do
+        writeTVar mbs bs { board = head, history = tail, fim = False, elapsedTime = 0 }
+        return mbs
+      )
+  )
 
 handleEvent _ bs = return bs
 
@@ -217,4 +278,21 @@ possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl 
 
 main :: IO ()
 main = do
-  playIO window backGround 30 initialState renderGame handleEvent playGame
+  sharedState <- newTVarIO initialState
+  forkIO $ thr sharedState
+  playIO window backGround 30 sharedState renderGame handleEvent playGame
+  return ()
+
+thr :: TVar BoardState -> IO ()
+thr mbs = forever $ do
+  threadDelay 1000000
+  bs <- readTVarIO mbs
+  if goBots bs
+    then atomically (do
+                        writeTVar mbs $ stepGame bs { elapsedTime = 0 }
+                    )
+    else if currentPlayer bs == Black
+         then atomically (do
+                             writeTVar mbs $ stepGame bs
+                         )
+         else return ()
