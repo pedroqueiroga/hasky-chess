@@ -129,7 +129,7 @@ maxDepth = 3
 
 playGame :: Float -> BoardState -> BoardState
 playGame elapTime bs = if goBots bs
-                       then if ((elapsedTime bs) > 2)
+                       then if ((elapsedTime bs) > 1)
                             then stepGame bs { elapsedTime = 0 }
                             else bs { elapsedTime = elapsedTime bs + elapTime }
                        else if currentPlayer bs == Black
@@ -148,9 +148,6 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
-        isPieceColorPosUnsafe (x, y) b = if (x < 0 || x > 7 || y < 0 || y > 7)
-                                         then False
-                                         else isPieceColorPos (x, y) b c
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
@@ -200,8 +197,11 @@ moveBoard sqp0@(i0, j0) sqp'@(i', j') c b
   where piece0 = getSquare sqp0 b
         pos0move = pos_move b piece0 sqp0 c
         pos_final = [x | x <- pos0move
-                       , rlxEqPcs (x !! i' !! j') piece0
+                       , let xij = x !! i' !! j'
+                       , rlxEqPcs xij piece0 ||
+                         (i0 == 6 && i' == 7 && eqPromoted xij piece0)
                        , x !! i0 !! j0 == Nothing]
+                    where 
 
 possiblePositions :: BoardState -> [SquarePos]
 possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl (Set.union) (Set.fromList []) [Set.fromList altpos | bToSee <- movesCmp, let altpos = getPiecePositions bToSee (fromJust sq)]) (Set.fromList $ getPiecePositions b (fromJust sq)) else []

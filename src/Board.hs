@@ -13,6 +13,7 @@ module Board
   , isPieceColorPos
   , getKing
   , rlxEqPcs
+  , eqPromoted
   , getPiecePositions
   , other
   ) where
@@ -36,7 +37,7 @@ class Other a where
 instance Other Color where
   other White = Black
   other Black = White
-  
+
 initialBoard = [(rCloser White), (pawnRow White)] ++ (replicate 4 emptyRow) ++ [(pawnRow Black), (rCloser Black)]
   where rCloserl :: Color -> Rank
         rCloserl c = map Just [Piece (Rook Unmov) c, Piece Knight c, Piece Bishop c]
@@ -84,8 +85,15 @@ rlxEqPcs (Just (Piece (Rook _) c)) (Just (Piece (Rook _) c')) = c == c'
 rlxEqPcs (Just (Piece (King _) c)) (Just (Piece (King _) c')) = c == c'
 rlxEqPcs p p' = p == p'
 
+eqPromoted :: Square -> Square -> Bool
+eqPromoted (Just (Piece Queen c)) (Just (Piece (Pawn _) c')) = c==c'
+eqPromoted (Just (Piece (Rook Moved) c)) (Just (Piece (Pawn _) c')) = c==c'
+eqPromoted (Just (Piece Bishop c)) (Just (Piece (Pawn _) c')) = c==c'
+eqPromoted (Just (Piece Knight c)) (Just (Piece (Pawn _) c')) = c==c'
+eqPromoted _ _ = False
+
 getPiecePositions :: Board -> Square -> [SquarePos]
 getPiecePositions b sq = [(i,j) | rank <- b
                                 , i <- [0..length b - 1]
                                 , j <- [0..length b - 1]
-                                , rlxEqPcs (getSquare (i,j) b) sq]
+                                , (rlxEqPcs (getSquare (i,j) b) sq) || (eqPromoted (getSquare (i, j) b) sq)]

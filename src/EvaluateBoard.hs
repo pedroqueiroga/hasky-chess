@@ -1,5 +1,6 @@
 module EvaluateBoard
   ( evaluateBoard
+  , piecetypeValue
   ) where
 
 import Board
@@ -68,8 +69,8 @@ pieceSquareTable (King _) = [[-30,-40,-40,-50,-50,-40,-40,-30],
                              [20, 30, 10,  0,  0, 10, 30, 20]]
 
 pieceTableValue :: Piece -> [Int]
-pieceTableValue (Piece p White) = concat (pieceSquareTable p)
-pieceTableValue (Piece p Black) = map (*(-1)) (concat (reverse (pieceSquareTable p)))
+pieceTableValue (Piece p White) = concat $ reverse $ pieceSquareTable p
+pieceTableValue (Piece p Black) = map (*(-1)) (concat (pieceSquareTable p))
 
 pieceSquareTableValue :: Int -> Square -> Int
 pieceSquareTableValue i (Just p) =
@@ -95,7 +96,7 @@ evaluateBoard :: Board -> Int
 evaluateBoard board = ev' 0 (concat board)
   where
     ev' :: Int -> [Square] -> Int
-    ev' i [p] = pieceSquareTableValue i p
+    ev' i [] = 0
     ev' i (p:xs) = (pieceSquareTableValue i p) + (ev' (i+1) xs)
 
 {-
