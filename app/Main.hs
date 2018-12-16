@@ -6,7 +6,6 @@ import Graphics.Gloss.Interface.Pure.Game hiding (Color)
 import Board
 import BestMove
 import MoveMaker
-import System.IO.Unsafe
 import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 
@@ -120,7 +119,7 @@ stepGame :: BoardState -> BoardState
 stepGame bs = if fim bs == True
               then bs
                 else if length (possible_moves newBoard (other c)) == 0
-                     then bs { board = newBoard, fim = True, currentTips = [] }
+                     then bs { board = newBoard, currentPlayer = (other c), fim = True, currentTips = [] }
                      else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs }
   where newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
@@ -145,7 +144,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
-                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [], history = (board bs):(history bs) }
+                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
