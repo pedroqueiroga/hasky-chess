@@ -58,7 +58,8 @@ isPiece Nothing = False
 isPiece _ = True
 
 isPieceColor :: Square -> Color -> Bool
-isPieceColor sq@(Just (Piece p c')) c = isPiece sq && c' == c
+isPieceColor Nothing _ = False
+isPieceColor (Just (Piece _ c')) c = c' == c
 
 isPiecePos :: SquarePos -> Board -> Bool
 isPiecePos sqp = isPiece . getSquare sqp
