@@ -120,8 +120,11 @@ stepGame bs = if fim bs == True
               then bs
                 else if length (possible_moves newBoard (other c)) == 0
                      then bs { board = newBoard, currentPlayer = (other c), fim = True, currentTips = [] }
-                     else bs { board = newBoard, currentPlayer = (other c), currentTips = possiblePositions bs { board = newBoard, currentPlayer = (other c), currentTips = [] } }
-  where newBoard = bestMove maxDepth (board bs) c
+                     else bs { board = newBoard, currentPlayer = (other c), history = hist, currentTips = possiblePositions bs { board = newBoard, currentPlayer = (other c), currentTips = [] } }
+  where hist = if (c == White)
+               then (board bs):(history bs)
+               else history bs
+        newBoard = bestMove maxDepth (board bs) c
         c = currentPlayer bs
 
 maxDepth :: Int
@@ -144,7 +147,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
-                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
+                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [], history = []  }
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
@@ -201,7 +204,7 @@ moveBoard sqp0@(i0, j0) sqp'@(i', j') c b
                        , rlxEqPcs xij piece0 ||
                          (i0 == 6 && i' == 7 && eqPromoted xij piece0)
                        , x !! i0 !! j0 == Nothing]
-                    where 
+                    where
 
 possiblePositions :: BoardState -> [SquarePos]
 possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl (Set.union) (Set.fromList []) [Set.fromList altpos | bToSee <- movesCmp, let altpos = getPiecePositions bToSee (fromJust sq)]) (Set.fromList $ getPiecePositions b (fromJust sq)) else []
