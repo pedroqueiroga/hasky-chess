@@ -2,7 +2,7 @@ module Main where
 
 import qualified Graphics.Gloss as Gloss
 import qualified Graphics.Gloss.Game as Game
-import Graphics.Gloss.Interface.Pure.Game hiding (Color)
+import Graphics.Gloss.Interface.IO.Game hiding (Color)
 import Board
 import BestMove
 import MoveMaker
@@ -96,9 +96,9 @@ data BoardState =
   , elapsedTime :: Float
   }
 
-renderGame :: BoardState -> Gloss.Picture
+renderGame :: BoardState -> IO Gloss.Picture
 renderGame game = drawBoard (board game)
-  where drawBoard b = Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.pictures $ ((mkBoard game) ++ (mkPieces b))
+  where drawBoard b = return $ Gloss.translate (-4.5*(fromIntegral fator)) (-4.5*(fromIntegral fator)) $ Gloss.pictures $ ((mkBoard game) ++ (mkPieces b))
 
 initialState :: BoardState
 initialState = Game
@@ -125,53 +125,53 @@ stepGame bs = if fim bs == True
         c = currentPlayer bs
 
 maxDepth :: Int
-maxDepth = 3
+maxDepth = 5
 
-playGame :: Float -> BoardState -> BoardState
-playGame elapTime bs = if goBots bs
-                       then if ((elapsedTime bs) > 1)
-                            then stepGame bs { elapsedTime = 0 }
-                            else bs { elapsedTime = elapsedTime bs + elapTime }
-                       else if currentPlayer bs == Black
-                            then stepGame bs else bs
+playGame :: Float -> BoardState -> IO BoardState
+playGame elapTime bs = return $ if goBots bs
+                                then if ((elapsedTime bs) > 1)
+                                     then stepGame bs { elapsedTime = 0 }
+                                     else bs { elapsedTime = elapsedTime bs + elapTime }
+                                else if currentPlayer bs == Black
+                                     then stepGame bs else bs
 
-handleEvent :: Event -> BoardState -> BoardState
+handleEvent :: Event -> BoardState -> IO BoardState
 handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
-  = if fim bs == True then initialState
+  = if fim bs == True then return initialState
     else
       if (squareSelected bs) == Nothing
-      then bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
+      then return bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
       else if mb == Nothing
-           then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+           then return bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
            else if length (possible_moves (fromJust mb) (other c)) == 0
-                then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
-                else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
+                then return bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [] }
+                else return bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)
         c = currentPlayer bs
 
 handleEvent (EventMotion mp@(x,y)) bs =
   if lastMousePos bs /= curPos
-  then bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = if fim bs == True then [] else possiblePositions bs }
-  else bs
+  then return bs { lastMousePos = currentMousePos bs, currentMousePos = curPos, currentTips = if fim bs == True then [] else possiblePositions bs }
+  else return bs
   where bmp@(bmpx, bmpy) = fromPixel mp
         curPos = if bmpx > 7 || bmpx < 0 || bmpy > 7 || bmpy < 0 then Nothing else Just bmp
 
 handleEvent (EventKey (MouseButton RightButton) Down _ mp@(x,y)) bs
   = if fim bs == True
-    then initialState
-    else bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
+    then return initialState
+    else return bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
 
-handleEvent (EventKey (Char 'r') Up _ _) bs = initialState
-handleEvent (EventKey (Char 'b') Up _ _) bs = bs { goBots = True }
-handleEvent (EventKey (Char 'p') Up _ _) bs = bs { goBots = False }
+handleEvent (EventKey (Char 'r') Up _ _) bs = return initialState
+handleEvent (EventKey (Char 'b') Up _ _) bs = return bs { goBots = True }
+handleEvent (EventKey (Char 'p') Up _ _) bs = return bs { goBots = False }
 
 handleEvent (EventKey (Char 'u') Up _ _) bs
-  | history bs == [] = bs
+  | history bs == [] = return bs
   | otherwise =
-  bs { board = head, history = tail, fim = False, elapsedTime = 0 }
+  return bs { board = head, history = tail, fim = False, elapsedTime = 0 }
   where head:tail = history bs
 
-handleEvent _ bs = bs
+handleEvent _ bs = return bs
 
 -- | Traz de coordenadas de camera pra coordenadas de xadrez
 -- WIDTH
@@ -217,4 +217,4 @@ possiblePositions bs = if sq /= Nothing then Set.toList $ Set.difference (foldl 
 
 main :: IO ()
 main = do
-  Gloss.play window backGround 30 initialState renderGame handleEvent playGame
+  playIO window backGround 30 initialState renderGame handleEvent playGame

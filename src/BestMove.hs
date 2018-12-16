@@ -6,11 +6,15 @@ import MoveMaker
 
 import Data.Maybe (fromJust)
 import Data.List (elemIndex)
+import System.IO.Unsafe
 
 bestMove :: Int -> Board -> Color -> Board
 bestMove n b c
   | n < 0 = b
-  | otherwise = bs !! (fst $ forEach 0 (0, (-99999999)) (-99999999) 99999999 bs)
+  | otherwise = bs !! unsafePerformIO (do
+                                          let a = (fst $ forEach 0 (0, (-99999999)) (-99999999) 99999999 bs)
+                                          print a
+                                          return a)
   where bs = possible_moves b c
         mml = [miniMax c (n-1) False b' (other c) (-99999999) 99999999 | b' <- bs]
         mm try alpha beta = miniMax c (n-1) False try (other c) alpha beta
