@@ -1,6 +1,10 @@
 # hasky-chess
-no diretório do repositório:
+o programa requer stack para compilação e execução: https://docs.haskellstack.org/en/stable/README/
+comandos para compilar e executar:
 ```shell
+$ git clone https://github.com/psq-cin/hasky-chess.git
+$ cd hasky-chess
+$ stack setup
 $ stack build
 $ stack exec hasky-chess-exe
 ```
