@@ -1,5 +1,6 @@
 # hasky-chess
 o programa requer stack para compilação e execução: https://docs.haskellstack.org/en/stable/README/
+
 comandos para compilar e executar:
 ```shell
 $ git clone https://github.com/psq-cin/hasky-chess.git
