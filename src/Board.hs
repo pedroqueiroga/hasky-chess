@@ -1,5 +1,5 @@
 module Board
-  ( Board, Rank, Square, SquarePos
+  ( Board, Rank, Square, SquarePos, State
   , Piece (Piece)
   , Piecetype (Pawn, Knight, Bishop, Rook, King, Queen)
   , Pawntype (Starting, Passant, MakeMePassant, Normal)
@@ -30,6 +30,8 @@ data Piecetype = Pawn Pawntype | Knight | Bishop | Rook RKType | King RKType | Q
 data Pawntype = Starting | Passant | MakeMePassant| Normal deriving (Show, Eq)
 data RKType = Unmov | Moved deriving (Show, Eq)
 data Color = White | Black deriving (Show, Eq)
+
+type State = (Board, Color)
 
 class Other a where
   other :: a -> a

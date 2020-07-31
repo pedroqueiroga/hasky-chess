@@ -118,17 +118,17 @@ initialState = Game
 stepGame :: BoardState -> BoardState
 stepGame bs = if fim bs == True
               then bs
-                else if length (possible_moves newBoard (other c)) == 0
+                else if length (possible_moves (newBoard, other c)) == 0
                      then bs { board = newBoard, currentPlayer = (other c), fim = True, currentTips = [] }
                      else bs { board = newBoard, currentPlayer = (other c), history = hist, currentTips = possiblePositions bs { board = newBoard, currentPlayer = (other c), currentTips = [] } }
   where hist = if (c == White)
                then (board bs):(history bs)
                else history bs
-        newBoard = bestMove maxDepth (board bs) c
+        newBoard = bestMove maxDepth ((board bs), c)
         c = currentPlayer bs
 
 maxDepth :: Int
-maxDepth = 3
+maxDepth = 8
 
 playGame :: Float -> BoardState -> BoardState
 playGame elapTime bs = if goBots bs
@@ -146,7 +146,7 @@ handleEvent (EventKey (MouseButton LeftButton) Down _ mp@(x,y)) bs
       then bs { squareSelected = if currentTips bs /= [] then (Just (fromPixel mp)) else Nothing, currentTips = possiblePositions bs }
       else if mb == Nothing
            then bs { squareSelected = Nothing, currentTips = possiblePositions bs { squareSelected = Nothing } }
-           else if length (possible_moves (fromJust mb) (other c)) == 0
+           else if length (possible_moves (fromJust mb,other c)) == 0
                 then bs { squareSelected = Nothing, board = fromJust mb, fim = True, currentTips = [], history = []  }
                 else bs { squareSelected = Nothing, board = fromJust mb, currentPlayer = other c, currentTips = [], history = (board bs):(history bs) }
   where mb = moveBoard (fromJust (squareSelected bs)) (fromPixel mp) c (board bs)

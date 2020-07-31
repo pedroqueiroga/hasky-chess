@@ -218,8 +218,8 @@ pos_move board piece pos player_c = let
         else filter (not . board_checked) $ move_func board_minus_piece pos piece player_c
         where (Just (Piece pt piece_c)) = piece
 
-possible_moves :: Board -> Color -> [Board]
-possible_moves board player_c = let
+possible_moves :: State -> [State]
+possible_moves (board, player_c) = let
     board_oriented = if (player_c == Black)
         then reverse board
         else board
@@ -233,5 +233,5 @@ possible_moves board player_c = let
 
     passant_processed_board = map (map $ map process_passant) next_boards
     in if (player_c == Black)
-        then map reverse passant_processed_board
-        else passant_processed_board
+        then map (\board -> (reverse board, other player_c)) passant_processed_board
+        else map (\board -> (board, other player_c)) passant_processed_board
