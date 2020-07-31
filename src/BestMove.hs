@@ -67,13 +67,13 @@ lowfirst (Node n sub) = Node n (sortBy (higher) (map highfirst sub))
 
 higher (Node n1 _) (Node n2 _) = compare n1 n2
 
-processed n c = (taketree 3 . highfirst) . fmap (evalB c) . prune n . gametree
+processed n c hl = (taketree 3 . hl) . fmap (evalB c) . prune n . gametree
 
 maximize n c =
-  maximum . maximize' . (processed n c)
+  maximum . maximize' . (processed n c highfirst)
 
 minimize n c =
-  minimum . minimize' . (processed n c)
+  minimum . minimize' . (processed n c lowfirst)
 
 foldtree f g a (Node label subtrees) =
   f label (foldtrees f g a subtrees)
